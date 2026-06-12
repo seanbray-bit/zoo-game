@@ -12,7 +12,9 @@ straight from your phone.
 
 **On this Mac:** double-click `index.html` — it opens in your browser.
 
-**On your iPhone:** see "Update it from your phone" below to get it onto the phone first.
+**On your phone (live):** https://seanbray-bit.github.io/zoo-game/
+
+**On GitHub:** https://github.com/seanbray-bit/zoo-game
 
 ---
 
@@ -66,18 +68,24 @@ From your phone after that:
 
 ---
 
-## 🍎 Turning it into a real App Store app (later, optional)
+## 🍎 TestFlight (native iOS app)
 
-A home-screen web app is enough for most people. If you later want it in the
-Apple App Store, wrap this same folder with **Capacitor**
-(https://capacitorjs.com) and build it in **Xcode** on a Mac. None of your game
-code has to change — Capacitor just puts it inside a native iOS shell.
+There's a ready-to-go native iOS app in the **`ios/`** folder. It's a thin Swift
+shell that displays your live game, so it can go on **TestFlight** / the App
+Store. It's already build-verified in Xcode.
+
+👉 Full step-by-step upload guide: **[TESTFLIGHT.md](TESTFLIGHT.md)**
+
+The neat part: once it's on TestFlight, editing `index.html` on GitHub updates
+the game inside the app instantly — you only re-upload if you change the native
+shell.
 
 ---
 
 ## 📂 Files
 
-- `index.html` — the whole game (edit this one).
-- `manifest.json` — makes it installable as a home-screen app.
-- `icon.svg` — the app icon.
+- `index.html` — the whole game (**edit this one** for gameplay changes).
+- `manifest.json` / `icon.svg` — make it installable as a home-screen web app.
+- `ios/` — the native iOS app for TestFlight (open `ios/ZooGame.xcodeproj`).
+- `TESTFLIGHT.md` — how to upload to TestFlight.
 - `README.md` — this file.
