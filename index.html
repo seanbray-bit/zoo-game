@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#2e7d32" />
+<title>My Little Zoo</title>
+<link rel="manifest" href="manifest.json" />
+<style>
+  /* ===== Easy stuff to tweak is up here ===== */
+  :root {
+    --grass: #7cb342;
+    --grass-dark: #689f38;
+    --sky: #4fc3f7;
+    --panel: #1b5e20;
+    --gold: #ffd54f;
+    --text: #ffffff;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    background: var(--sky);
+    color: var(--text);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  #game {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* keeps content clear of the iPhone notch / home bar */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* ---- Top bar (money + day) ---- */
+  #hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--panel);
+    font-weight: 700;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    z-index: 2;
+  }
+  #hud .coins { color: var(--gold); }
+  #hud .day { opacity: .9; }
+
+  /* ---- The zoo grid ---- */
+  #zoo {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 14px;
+    overflow-y: auto;
+    background:
+      repeating-linear-gradient(45deg, var(--grass) 0 24px, var(--grass-dark) 24px 48px);
+  }
+
+  .pen {
+    position: relative;
+    background: rgba(255,255,255,.14);
+    border: 3px solid rgba(255,255,255,.35);
+    border-radius: 18px;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: transform .08s ease;
+  }
+  .pen:active { transform: scale(.96); }
+
+  .pen.empty {
+    color: rgba(255,255,255,.7);
+    font-size: 15px;
+    font-weight: 600;
+    border-style: dashed;
+  }
+  .pen.empty .plus { font-size: 40px; line-height: 1; }
+
+  .animal {
+    font-size: 56px;
+    line-height: 1;
+    transition: transform .15s ease;
+  }
+  .pen.fed .animal { animation: bounce .5s ease; }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    30% { transform: translateY(-18px) scale(1.1); }
+  }
+  .animal.sad { filter: grayscale(.6); opacity: .8; }
+
+  .name { font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+  /* happiness + hunger bars */
+  .bars { width: 78%; margin-top: 6px; }
+  .bar {
+    height: 7px;
+    border-radius: 5px;
+    background: rgba(0,0,0,.25);
+    margin: 3px 0;
+    overflow: hidden;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 5px;
+    transition: width .3s ease;
+  }
+  .happy > span { background: #ffca28; }
+  .full  > span { background: #66bb6a; }
+
+  .hungry-tag {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 18px;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 50% { transform: scale(1.3); } }
+
+  /* ---- Shop / bottom bar ---- */
+  #shop {
+    background: var(--panel);
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    z-index: 2;
+  }
+  .shop-item {
+    flex: 0 0 auto;
+    background: rgba(255,255,255,.12);
+    border: 2px solid rgba(255,255,255,.25);
+    border-radius: 14px;
+    padding: 8px 10px;
+    text-align: center;
+    min-width: 76px;
+  }
+  .shop-item .emoji { font-size: 30px; }
+  .shop-item .price { color: var(--gold); font-weight: 700; font-size: 13px; }
+  .shop-item .label { font-size: 11px; opacity: .85; }
+  .shop-item:active { transform: scale(.94); }
+  .shop-item.locked { opacity: .4; }
+
+  /* floating "+£" coin popups */
+  .pop {
+    position: fixed;
+    font-weight: 800;
+    color: var(--gold);
+    pointer-events: none;
+    animation: floatUp 1s ease forwards;
+    z-index: 5;
+    text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+  @keyframes floatUp {
+    to { transform: translateY(-50px); opacity: 0; }
+  }
+
+  #toast {
+    position: fixed;
+    bottom: 90px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.8);
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+    z-index: 6;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="hud">
+    <div class="coins">🪙 <span id="coins">0</span></div>
+    <div class="day">🐾 My Little Zoo</div>
+    <div class="visitors">👬 <span id="visitors">0</span></div>
+  </div>
+
+  <div id="zoo"></div>
+
+  <div id="shop"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* =======================================================================
+   MY LITTLE ZOO  —  a tiny 2D zoo game
+   -----------------------------------------------------------------------
+   HOW TO PLAY
+   - Tap an empty pen, then tap an animal in the shop to buy & place it.
+   - Tap an animal to feed it. Fed = happy. Happy animals attract visitors.
+   - Visitors pay you coins. Spend coins on more animals.
+
+   HOW TO TWEAK (good first edits)
+   - ANIMALS list below: add a new animal by copying a line.
+   - START_COINS: how much money you begin with.
+   - PEN_COUNT: how many pens (enclosures) the zoo has.
+   ======================================================================= */
+
+const START_COINS = 50;
+const PEN_COUNT   = 6;
+
+// Add or change animals here. price = cost to buy, income = coins per happy tick.
+const ANIMALS = [
+  { id: 'rabbit',  emoji: '🐰', name: 'Bunny',   price: 20,  income: 1 },
+  { id: 'penguin', emoji: '🐧', name: 'Pengu',   price: 40,  income: 2 },
+  { id: 'monkey',  emoji: '🐵', name: 'Coco',    price: 70,  income: 3 },
+  { id: 'tiger',   emoji: '🐯', name: 'Stripes', price: 120, income: 5 },
+  { id: 'panda',   emoji: '🐼', name: 'Bamboo',  price: 180, income: 7 },
+  { id: 'elephant',emoji: '🐘', name: 'Tusk',    price: 260, income: 9 },
+  { id: 'lion',    emoji: '🦁', name: 'Leo',     price: 350, income: 12 },
+];
+
+// ---- Game state (saved to the phone automatically) ----
+let state = load() || {
+  coins: START_COINS,
+  visitors: 0,
+  pens: Array.from({ length: PEN_COUNT }, () => null), // each pen: null or {animalId, hunger, happiness}
+};
+
+let selectedPen = null; // pen index waiting for a shop pick
+
+const $ = (id) => document.getElementById(id);
+const zooEl = $('zoo');
+const shopEl = $('shop');
+
+function animalById(id) { return ANIMALS.find(a => a.id === id); }
+
+// ---------- Rendering ----------
+function render() {
+  $('coins').textContent = Math.floor(state.coins);
+  $('visitors').textContent = state.visitors;
+
+  // pens
+  zooEl.innerHTML = '';
+  state.pens.forEach((pen, i) => {
+    const el = document.createElement('div');
+    el.className = 'pen';
+    el.dataset.i = i;
+
+    if (!pen) {
+      el.classList.add('empty');
+      el.innerHTML = (selectedPen === i)
+        ? '<div class="plus">⬇️</div><div>pick an animal</div>'
+        : '<div class="plus">＋</div><div>tap to add</div>';
+    } else {
+      const a = animalById(pen.animalId);
+      const sad = pen.happiness < 40;
+      el.innerHTML = `
+        <div class="animal ${sad ? 'sad' : ''}">${a.emoji}</div>
+        <div class="name">${a.name}</div>
+        <div class="bars">
+          <div class="bar happy"><span style="width:${pen.happiness}%"></span></div>
+          <div class="bar full"><span style="width:${100 - pen.hunger}%"></span></div>
+        </div>
+        ${pen.hunger > 60 ? '<div class="hungry-tag">🍽️</div>' : ''}
+      `;
+    }
+    zooEl.appendChild(el);
+  });
+
+  // shop
+  shopEl.innerHTML = '';
+  ANIMALS.forEach(a => {
+    const el = document.createElement('div');
+    const afford = state.coins >= a.price;
+    el.className = 'shop-item' + (afford ? '' : ' locked');
+    el.dataset.animal = a.id;
+    el.innerHTML = `
+      <div class="emoji">${a.emoji}</div>
+      <div class="label">${a.name}</div>
+      <div class="price">🪙${a.price}</div>
+    `;
+    shopEl.appendChild(el);
+  });
+}
+
+// ---------- Input ----------
+zooEl.addEventListener('click', (e) => {
+  const penEl = e.target.closest('.pen');
+  if (!penEl) return;
+  const i = +penEl.dataset.i;
+  const pen = state.pens[i];
+
+  if (!pen) {
+    // select this empty pen, then player picks from shop
+    selectedPen = (selectedPen === i) ? null : i;
+    toast(selectedPen === i ? 'Now tap an animal below 👇' : '');
+    render();
+  } else {
+    feed(i, penEl);
+  }
+});
+
+shopEl.addEventListener('click', (e) => {
+  const item = e.target.closest('.shop-item');
+  if (!item) return;
+  const a = animalById(item.dataset.animal);
+
+  if (selectedPen === null) { toast('Tap an empty pen first ☝️'); return; }
+  if (state.coins < a.price) { toast('Not enough coins 🪙'); return; }
+
+  state.coins -= a.price;
+  state.pens[selectedPen] = { animalId: a.id, hunger: 50, happiness: 60 };
+  selectedPen = null;
+  toast(`${a.name} the ${a.id} moved in! 🎉`);
+  save(); render();
+});
+
+function feed(i, penEl) {
+  const pen = state.pens[i];
+  pen.hunger = Math.max(0, pen.hunger - 35);
+  pen.happiness = Math.min(100, pen.happiness + 20);
+  penEl.classList.add('fed');
+  setTimeout(() => penEl.classList.remove('fed'), 500);
+  save(); render();
+}
+
+// ---------- Game loop ----------
+// Every tick: animals get hungrier, happiness drifts, happy animals earn coins.
+setInterval(() => {
+  let earned = 0;
+  state.pens.forEach(pen => {
+    if (!pen) return;
+    pen.hunger = Math.min(100, pen.hunger + 3);
+    // hungry animals get sad, fed animals stay cheerful
+    if (pen.hunger > 70) pen.happiness = Math.max(0, pen.happiness - 4);
+    else pen.happiness = Math.min(100, pen.happiness + 1);
+
+    if (pen.happiness > 50) {
+      earned += animalById(pen.animalId).income * (pen.happiness / 100);
+    }
+  });
+
+  if (earned > 0) {
+    state.coins += earned;
+    state.visitors = state.pens.filter(p => p && p.happiness > 50).length * 3;
+  }
+  save(); render();
+}, 2000);
+
+// ---------- Save / load (localStorage = stays on the phone) ----------
+function save() { localStorage.setItem('zoo-save', JSON.stringify(state)); }
+function load() {
+  try { return JSON.parse(localStorage.getItem('zoo-save')); }
+  catch { return null; }
+}
+
+// ---------- Little helpers ----------
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  if (!msg) { t.classList.remove('show'); return; }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+render();
+</script>
+</body>
+</html>

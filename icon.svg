@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="110" fill="#7cb342"/>
+  <rect width="512" height="200" rx="0" fill="#4fc3f7"/>
+  <circle cx="400" cy="90" r="42" fill="#ffd54f"/>
+  <text x="256" y="360" font-size="240" text-anchor="middle" dominant-baseline="middle">🦁</text>
+</svg>

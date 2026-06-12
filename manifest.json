@@ -1,0 +1,18 @@
+{
+  "name": "My Little Zoo",
+  "short_name": "Zoo",
+  "description": "A cosy 2D zoo game — look after your animals!",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#4fc3f7",
+  "theme_color": "#2e7d32",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

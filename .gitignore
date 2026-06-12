@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Node / Capacitor (used later if we wrap for the App Store)
+node_modules/
+dist/
+
+# iOS / Xcode build output
+ios/App/build/
+ios/App/Pods/
+*.xcuserstate
